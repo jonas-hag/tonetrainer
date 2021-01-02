@@ -224,16 +224,11 @@ def show_help():
 
 
 if __name__ == "__main__":
-    # test = TonePair()
-    # test.new()
-    # test.show_pinyin()
-    # test.play_audio()
-    # test.evaluate_userinput()
-    # test.update_db()
     # show startup message
     print(
         "Welcome to the (mandarin) tonetrainer (c) 2020 - 2021 Jonas Hagenberg")
-    print("Characters and pinyin by CEDICT, pronounciation by forvo.com")
+    print("Characters and pinyin by CC-CEDICT, https://cc-cedict.org/wiki/start,")
+    print("pronunciations by Forvo, https://forvo.com")
     print("For help press 'h + Enter', to start press 's + Enter'")
     # start program or show help
     input_string = str(input())

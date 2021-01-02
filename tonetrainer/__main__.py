@@ -125,6 +125,11 @@ class TonePair:
     def check_tones(self, first_tone, second_tone):
         correct_first_tone = int(self.all_data[4])
         correct_second_tone = int(self.all_data[5])
+
+        # correct for the 33 -> 23 tone conversion
+        if correct_first_tone == 3 and correct_second_tone == 3:
+            correct_first_tone = 2
+
         if (first_tone == correct_first_tone and
                 second_tone == correct_second_tone):
             print("your guess was correct")
@@ -143,6 +148,17 @@ class TonePair:
         )
         self.connection.commit()
 
+    def wait_for_next_pair(self):
+        current_input = str(input())
+        if current_input == "r":
+            self.play_audio()
+            return True
+        if current_input == "q":
+            self.connection.close()
+            sys.exit(0)
+        else:
+            return False
+
 
 def run_app():
     while True:
@@ -158,8 +174,24 @@ def run_app():
             current_pair_active = current_pair.evaluate_userinput()
         # 4. save changes
         current_pair.update_db()
-        # 5. wait until enter
-        input()
+        # 5. wait for next commands (replay/quit/continue with next pair)
+        wait_for_commands = True
+        while wait_for_commands:
+            wait_for_commands = current_pair.wait_for_next_pair()
+
+def show_help():
+    print("This program helps you to train recognising mandarin tones.")
+    print("The program shows you the pinyin of a two character word and "
+          "plays the corresponding audio")
+    print("To replay the audio, press 'r + Enter', to quit the program "
+          "press 'q + Enter'")
+    print("When you want to make a guess, type the two tones and press enter, "
+          "e.g. '24'")
+    print("After your guess, it is shown if you were correct and which word "
+          "was queried")
+    print("Then you can replay the audio ('r + Enter'), quit ('q + Enter') "
+          "or continue with the next tone pair (press 'Enter')")
+    print("Now press 'Enter' to continue")
 
 if __name__ == "__main__":
     # test = TonePair()
@@ -179,10 +211,10 @@ if __name__ == "__main__":
         input_string = str(input())
 
     if input_string == "h":
-        print("help here")
-        # TODO: show help
+        show_help()
+        input()
+        run_app()
     elif input_string == "s":
-        print("start program here")
         run_app()
     else:
         sys.exit(0)

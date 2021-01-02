@@ -11,7 +11,8 @@ class TonePair:
         self.connection = sqlite3.connect("../data/tone_and_user_info.db")
         self.cursor = self.connection.cursor()
         self.all_data = None
-        self.audio_path = None
+        self.audio_paths = None
+        self.last_played_audio = 0
         # get the API key
         with open("../apikey.txt") as file:
             self.api_key = file.readline().strip()
@@ -36,9 +37,10 @@ class TonePair:
             # 1. define the parameters
             payload = {"key": self.api_key,
                        "format": "json",
-                       "action": "standard-pronunciation",
+                       "action": "word-pronunciations",
                        "word": self.all_data[1],
-                       "language": "zh"}
+                       "language": "zh",
+                       "order": "rate-desc"}
             # bring the payload into the correct format
             payload_string = "/".join(key + "/" + value for key, value
                                       in payload.items())
@@ -52,14 +54,18 @@ class TonePair:
                 self.connection.close()
                 sys.exit(1)
             # check that the word actually exists
-            if len(api_result.json()["items"]) == 1:
-                # 4. save the mp3 path
+            if len(api_result.json()["items"]) > 0:
+                # 4. save the mp3 paths
                 # the returned json object has the following structure:
-                # dictionary with only entry "items": api_result.json()["items]
-                # the value of "items" is a list: .[0]
-                # this list contains a dictionary which also includes the
-                # desired path: .["pathmp3]
-                self.audio_path = api_result.json()["items"][0]["pathmp3"]
+                # dictionary with 'attributes'  and 'items' api_result.json()["items]
+                # the value of "items" is a list of dictionaries, from each item
+                # with a rating from at least 0 extract the mp3path
+                self.audio_paths = [entry["pathmp3"] for entry
+                                    in api_result.json()["items"]
+                                    if entry["rate"] >= 0]
+                # reset the number of current played audio
+                self.last_played_audio = 0
+
                 # if not already noted in the DB, mark the availability with yes
                 if self.all_data[6] != "yes":
                     self.cursor.execute(
@@ -78,9 +84,23 @@ class TonePair:
                 )
                 self.connection.commit()
 
-    def play_audio(self):
+    def play_audio(self, playback_type="current"):
+        # play the current or next audio file
+        file_number = None
+        if playback_type == "current":
+            # keep the current audio file
+            file_number = self.last_played_audio
+        elif playback_type == "next":
+            # use the next audio file, if the end of the audio paths are
+            # reached, use the first again
+            if self.last_played_audio == len(self.audio_paths) - 1:
+                file_number = 0
+            else:
+                file_number = self.last_played_audio + 1
+            self.last_played_audio = file_number
+
         # play the audio
-        audio_file = vlc.MediaPlayer(self.audio_path)
+        audio_file = vlc.MediaPlayer(self.audio_paths[file_number])
         audio_file.play()
 
     def show_pinyin(self):
@@ -88,33 +108,36 @@ class TonePair:
         print(output_string)
 
     def evaluate_userinput(self):
-        input_string = str(input())
+        current_input = str(input())
 
         # parse the input and extract the possible tones
-        if (len(input_string) == 2):
-            first_tone = input_string[0]
-            second_tone = input_string[1]
+        if len(current_input) == 2:
+            first_tone = current_input[0]
+            second_tone = current_input[1]
             try:
                 first_tone_int = int(first_tone)
-            except:
+            except (ValueError, IndexError):
                 first_tone_int = -1
 
             try:
                 second_tone_int = int(second_tone)
-            except:
+            except (ValueError, IndexError):
                 second_tone_int = -1
         else:
             first_tone_int = -1
             second_tone_int = -1
 
-        if input_string == "q":
+        if current_input == "q":
             self.connection.close()
             sys.exit(0)
-        elif input_string == "r":
+        elif current_input == "r":
             self.play_audio()
             return True
-        elif (first_tone_int > 0 and first_tone_int < 6 and
-              second_tone_int > 0 and second_tone_int < 6):
+        elif current_input == "n":
+            self.play_audio(playback_type="next")
+            return True
+        elif (0 < first_tone_int < 6 and
+              0 < second_tone_int < 6):
             self.check_tones(first_tone_int, second_tone_int)
             return False
         else:
@@ -153,6 +176,9 @@ class TonePair:
         if current_input == "r":
             self.play_audio()
             return True
+        if current_input == "n":
+            self.play_audio(playback_type="next")
+            return True
         if current_input == "q":
             self.connection.close()
             sys.exit(0)
@@ -179,19 +205,23 @@ def run_app():
         while wait_for_commands:
             wait_for_commands = current_pair.wait_for_next_pair()
 
+
 def show_help():
     print("This program helps you to train recognising mandarin tones.")
     print("The program shows you the pinyin of a two character word and "
           "plays the corresponding audio")
-    print("To replay the audio, press 'r + Enter', to quit the program "
-          "press 'q + Enter'")
+    print("To replay the audio, press 'r + Enter', to play the next "
+          "pronunciation from a different person,")
+    print("press 'n + Enter', to quit the program press 'q + Enter'")
     print("When you want to make a guess, type the two tones and press enter, "
           "e.g. '24'")
     print("After your guess, it is shown if you were correct and which word "
           "was queried")
-    print("Then you can replay the audio ('r + Enter'), quit ('q + Enter') "
+    print("Then you can replay the audio ('r + Enter'), replay the next audio "
+          "('n' + Enter), quit ('q + Enter') "
           "or continue with the next tone pair (press 'Enter')")
     print("Now press 'Enter' to continue")
+
 
 if __name__ == "__main__":
     # test = TonePair()
@@ -201,7 +231,8 @@ if __name__ == "__main__":
     # test.evaluate_userinput()
     # test.update_db()
     # show startup message
-    print("Welcome to the (mandarin) tonetrainer (c) 2020 - 2021 Jonas Hagenberg")
+    print(
+        "Welcome to the (mandarin) tonetrainer (c) 2020 - 2021 Jonas Hagenberg")
     print("Characters and pinyin by CEDICT, pronounciation by forvo.com")
     print("For help press 'h + Enter', to start press 's + Enter'")
     # start program or show help

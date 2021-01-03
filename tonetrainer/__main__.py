@@ -151,14 +151,20 @@ class TonePair:
 
         # correct for the 33 -> 23 tone conversion
         if correct_first_tone == 3 and correct_second_tone == 3:
-            correct_first_tone = 2
+            correct_first_tone_adapted = 2
+        else:
+            correct_first_tone_adapted = correct_first_tone
 
-        if (first_tone == correct_first_tone and
+        if (first_tone == correct_first_tone_adapted and
                 second_tone == correct_second_tone):
             print("your guess was correct")
         else:
-            print("your guess was not correct; the correct tones are " +
-                  self.all_data[4] + " " + self.all_data[5])
+            if correct_first_tone == 3 and correct_second_tone == 3:
+                print("your guess was not correct; the correct tones are "
+                      "2 3 (3 3)")
+            else:
+                print("your guess was not correct; the correct tones are " +
+                      self.all_data[4] + " " + self.all_data[5])
         print("the queried word was " + self.all_data[1])
 
     def update_db(self):
@@ -227,7 +233,8 @@ if __name__ == "__main__":
     # show startup message
     print(
         "Welcome to the (mandarin) tonetrainer (c) 2020 - 2021 Jonas Hagenberg")
-    print("Characters and pinyin by CC-CEDICT, https://cc-cedict.org/wiki/start,")
+    print(
+        "Characters and pinyin by CC-CEDICT, https://cc-cedict.org/wiki/start,")
     print("pronunciations by Forvo, https://forvo.com")
     print("For help press 'h + Enter', to start press 's + Enter'")
     # start program or show help

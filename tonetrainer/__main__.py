@@ -1,20 +1,25 @@
 import sys
+import os
 import sqlite3
 import requests
 import vlc
+
+current_dir = os.path.dirname(__file__)
 
 
 class TonePair:
 
     def __init__(self):
         # set up the DB connection
-        self.connection = sqlite3.connect("../data/tone_and_user_info.db")
+        db_path = os.path.join(current_dir, "../data/tone_and_user_info.db")
+        self.connection = sqlite3.connect(db_path)
         self.cursor = self.connection.cursor()
         self.all_data = None
         self.audio_paths = None
         self.last_played_audio = 0
         # get the API key
-        with open("../apikey.txt") as file:
+        api_path = os.path.join(current_dir, "../apikey.txt")
+        with open(api_path) as file:
             self.api_key = file.readline().strip()
 
     def new(self):

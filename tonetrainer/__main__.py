@@ -26,6 +26,22 @@ class TonePair:
                                     "../data/pron_exclusion_list.txt")
         with open(exclude_path) as file:
             self.excluded_users = file.read().splitlines()
+        # read in the settings
+        # so far only if simplified or traditional characters are shown
+        setting_path = os.path.join(current_dir, "../data/settings.txt")
+        with open(setting_path) as file:
+            settings = file.read().splitlines()
+        if settings[0] == "simplified":
+            # because simplified is the second column in the DB
+            self.character_style = 1
+        elif settings[0] == "traditional":
+            # because traditional is the first column in the DB
+            self.character_style = 0
+        else:
+            print("The settings file doesn't contain 'simplified' or "
+                  "'traditional' in the first line, stopping.")
+            self.connection.close()
+            sys.exit(1)
 
     def new(self):
         # get a random tone pair (word + audio)
@@ -203,7 +219,7 @@ class TonePair:
             else:
                 print("your guess was not correct; the correct tones are " +
                       self.all_data[4] + " " + self.all_data[5])
-        print("the queried word was " + self.all_data[1])
+        print("the queried word was " + self.all_data[self.character_style])
 
     def update_db(self):
         new_number_tested = int(self.all_data[7]) + 1
@@ -273,16 +289,39 @@ if __name__ == "__main__":
     print(
         "Characters and pinyin by CC-CEDICT, https://cc-cedict.org/wiki/start,")
     print("pronunciations by Forvo, https://forvo.com")
-    print("For help press 'h + Enter', to start press 's + Enter'")
+    print("For help press 'h + Enter', to start press 's + Enter',")
+    print("to quit press 'q + Enter', to set the simplified/traditional setting, ")
+    print("press 't + Enter'")
     # start program or show help
     input_string = str(input())
-    while input_string != "h" and input_string != "s" and input_string != "q":
+    while input_string != "h" and input_string != "s"\
+            and input_string != "q" and input_string != "t":
         print("Please enter a character out of the choices")
         input_string = str(input())
 
     if input_string == "h":
         show_help()
         input()
+        run_app()
+    elif input_string == "t":
+        wait_for_input = True
+        while wait_for_input:
+            print("type 's + Enter' for simplified or 't + Enter' for 'traditional':")
+            input_setting = str(input())
+            if input_setting == "s":
+                setting_path = os.path.join(current_dir, "../data/settings.txt")
+                with open(setting_path, "w") as file:
+                    file.write("simplified")
+                wait_for_input = False
+            elif input_setting == "t":
+                setting_path = os.path.join(current_dir, "../data/settings.txt")
+                with open(setting_path, "w") as file:
+                    file.write("traditional")
+                wait_for_input = False
+            else:
+                print("please type one of the above mentioned characters")
+                wait_for_input = True
+
         run_app()
     elif input_string == "s":
         run_app()

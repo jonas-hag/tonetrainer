@@ -21,6 +21,11 @@ class TonePair:
         api_path = os.path.join(current_dir, "../apikey.txt")
         with open(api_path) as file:
             self.api_key = file.readline().strip()
+        # get users to exclude from pronunciation
+        exclude_path = os.path.join(current_dir,
+                                    "../data/pron_exclusion_list.txt")
+        with open(exclude_path) as file:
+            self.excluded_users = file.read().splitlines()
 
     def new(self):
         # get a random tone pair (word + audio)
@@ -59,15 +64,17 @@ class TonePair:
                 self.connection.close()
                 sys.exit(1)
             # check that the word actually exists
-            if len(api_result.json()["items"]) > 0:
+            checked_results = self.check_forvo_results(
+                api_result.json()["items"])
+            if checked_results[0]:
                 # 4. save the mp3 paths
                 # the returned json object has the following structure:
                 # dictionary with 'attributes'  and 'items' api_result.json()["items]
                 # the value of "items" is a list of dictionaries, from each item
-                # with a rating from at least 0 extract the mp3path
-                self.audio_paths = [entry["pathmp3"] for entry
-                                    in api_result.json()["items"]
-                                    if entry["rate"] >= 0]
+                # with a rating from at least 0 that are not from excluded
+                # # users extract the mp3path
+                # this is done by the check_forvo_results function (above)
+                self.audio_paths = checked_results[1]
                 # reset the number of current played audio
                 self.last_played_audio = 0
 
@@ -89,6 +96,29 @@ class TonePair:
                 )
                 self.connection.commit()
 
+    def check_forvo_results(self, api_result):
+        # check that the forvo API returned entries at all
+        if len(api_result) == 0:
+            return False, None
+        else:
+            # if yes, check that there remain entries when the entries from
+            # the users in the exclusion list are removed
+            # the returned json object has the following structure:
+            # the value of api_result is a list of dictionaries, from each item
+            # with a rating from at least 0 that are not from the excluded
+            # users extract the mp3path
+            possible_audio_paths = [entry["pathmp3"] for entry
+                                    in api_result
+                                    if entry["rate"] >= 0 and
+                                    entry[
+                                        "username"] not in self.excluded_users]
+
+            # check if there is an audio link left
+            if len(possible_audio_paths) > 0:
+                return True, possible_audio_paths
+            else:
+                return False, None
+
     def play_audio(self, playback_type="current"):
         # play the current or next audio file
         file_number = None
@@ -109,7 +139,10 @@ class TonePair:
         audio_file.play()
 
     def show_pinyin(self):
-        output_string = self.all_data[2] + " " + self.all_data[3]
+        # output the pinyin and the number of available pronunciations
+        avail_pron = str(len(self.audio_paths))
+        string_pron = " [" + avail_pron + " pron.]"
+        output_string = self.all_data[2] + " " + self.all_data[3] + string_pron
         print(output_string)
 
     def evaluate_userinput(self):
@@ -231,7 +264,6 @@ def show_help():
     print("Then you can replay the audio ('r + Enter'), replay the next audio "
           "('n' + Enter), quit ('q + Enter') "
           "or continue with the next tone pair (press 'Enter')")
-    print("Now press 'Enter' to continue")
 
 
 if __name__ == "__main__":

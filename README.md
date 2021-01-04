@@ -26,6 +26,7 @@ from a different person, quit or enter your guess.
 On startup, you have the following choices:
 - `h + Enter` for help
 - `s + Enter` to start the program
+- `t + Enter` to chose simplified (`s`) or traditional (`t`) characters
 - `q + Enter` to exit the program
 
 Once you see the pinyin, you have the following choices:
@@ -45,6 +46,27 @@ from the current tone pair
 If a word consists of two third tone characters, the correct solution is `23`.
 To avoid hassles with tone conversions of 不 or 一, words containing these
 characters are not used.
+
+## Settings
+You can choose between simplified and traditional characters upon startup. Also,
+you can exclude forvo users from the played pronunciations. I've excluded the
+users
+
+- witenglish
+- xinghua
+
+by default, as they don't sound very natural. To exclude users,
+just add them to the file [pron_exclusion_list.txt](data/pron_exclusion_list.txt),
+each user in it's own line.
+
+## Known problems
+Sometimes, you'll see error messages like `[000001edd47072f0] prefetch stream error: unimplemented query (264) in control`.
+They come from the `vlc` library used to play the audio files and can be ignored.
+
+It may be the case that the dictionary data set contains the same word/characters
+with different pronunciations, while forvo only queries the word and doesn't
+distinguish the different pronunciation possibilities. Currently there is no
+solution for this.
 
 ## Data
 The pronunciations are provided by [forvo](https://forvo.com), the dictionary

@@ -33,10 +33,10 @@ class TonePair:
             settings = file.read().splitlines()
         if settings[0] == "simplified":
             # because simplified is the second column in the DB
-            self.character_style = 1
+            self.character_style = 2
         elif settings[0] == "traditional":
             # because traditional is the first column in the DB
-            self.character_style = 0
+            self.character_style = 1
         else:
             print("The settings file doesn't contain 'simplified' or "
                   "'traditional' in the first line, stopping.")
@@ -64,7 +64,7 @@ class TonePair:
             payload = {"key": self.api_key,
                        "format": "json",
                        "action": "word-pronunciations",
-                       "word": self.all_data[1],
+                       "word": self.all_data[2],
                        "language": "zh",
                        "order": "rate-desc"}
             # bring the payload into the correct format
@@ -95,11 +95,11 @@ class TonePair:
                 self.last_played_audio = 0
 
                 # if not already noted in the DB, mark the availability with yes
-                if self.all_data[6] != "yes":
+                if self.all_data[7] != "yes":
                     self.cursor.execute(
                         "UPDATE toneinfo SET forvo_available = ? "
                         "WHERE simplified = ?",
-                        ("yes", self.all_data[1])
+                        ("yes", self.all_data[2])
                     )
                     self.connection.commit()
                 searching_word = False
@@ -108,7 +108,7 @@ class TonePair:
                 self.cursor.execute(
                     "UPDATE toneinfo SET forvo_available = ? "
                     "WHERE simplified = ?",
-                    ("no", self.all_data[1])
+                    ("no", self.all_data[2])
                 )
                 self.connection.commit()
 
@@ -158,7 +158,7 @@ class TonePair:
         # output the pinyin and the number of available pronunciations
         avail_pron = str(len(self.audio_paths))
         string_pron = " [" + avail_pron + " pron.]"
-        output_string = self.all_data[2] + " " + self.all_data[3] + string_pron
+        output_string = self.all_data[3] + " " + self.all_data[4] + string_pron
         print(output_string)
 
     def evaluate_userinput(self):
@@ -200,8 +200,8 @@ class TonePair:
             return True
 
     def check_tones(self, first_tone, second_tone):
-        correct_first_tone = int(self.all_data[4])
-        correct_second_tone = int(self.all_data[5])
+        correct_first_tone = self.all_data[5]
+        correct_second_tone = self.all_data[6]
 
         # correct for the 33 -> 23 tone conversion
         if correct_first_tone == 3 and correct_second_tone == 3:
@@ -211,23 +211,22 @@ class TonePair:
 
         if (first_tone == correct_first_tone_adapted and
                 second_tone == correct_second_tone):
-            print("your guess was correct")
+            print("your answer was correct")
         else:
             if correct_first_tone == 3 and correct_second_tone == 3:
-                print("your guess was not correct; the correct tones are "
+                print("your answer was not correct; the correct tones are "
                       "2 3 (3 3)")
             else:
-                print("your guess was not correct; the correct tones are " +
-                      self.all_data[4] + " " + self.all_data[5])
+                print("your answer was not correct; the correct tones are " +
+                      str(self.all_data[5]) + " " + str(self.all_data[6]))
         print("the queried word was " + self.all_data[self.character_style])
 
     def update_db(self):
-        new_number_tested = int(self.all_data[7]) + 1
-        new_number_tested_str = str(new_number_tested)
+        new_number_tested = self.all_data[8] + 1
         self.cursor.execute(
             "UPDATE toneinfo SET number_tested = ? "
             "WHERE simplified = ?",
-            (new_number_tested_str, self.all_data[1])
+            (new_number_tested, self.all_data[2])
         )
         self.connection.commit()
 
@@ -247,8 +246,8 @@ class TonePair:
 
 
 def run_app():
+    current_pair = TonePair()
     while True:
-        current_pair = TonePair()
         # 1. get a new tonepair
         current_pair.new()
         # 2. play the audio/show pinyin

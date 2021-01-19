@@ -3,6 +3,7 @@ import os
 import sqlite3
 import requests
 import vlc
+import random
 
 current_dir = os.path.dirname(__file__)
 
@@ -129,6 +130,10 @@ class TonePair:
                                     entry[
                                         "username"] not in self.excluded_users]
 
+            # shuffle the audio paths so that if a word is repeated not always
+            # the same recording is played first
+            random.shuffle(possible_audio_paths)
+
             # check if there is an audio link left
             if len(possible_audio_paths) > 0:
                 return True, possible_audio_paths
@@ -155,9 +160,12 @@ class TonePair:
         audio_file.play()
 
     def show_pinyin(self):
-        # output the pinyin and the number of available pronunciations
-        avail_pron = str(len(self.audio_paths))
-        string_pron = " [" + avail_pron + " pron.]"
+        # output the pinyin and if more pronunciations are available
+        avail_pron = len(self.audio_paths)
+        if avail_pron > 1:
+            string_pron = " [+]"
+        else:
+            string_pron = ""
         output_string = self.all_data[3] + " " + self.all_data[4] + string_pron
         print(output_string)
 
@@ -268,17 +276,19 @@ def run_app():
 def show_help():
     print("This program helps you to train recognising mandarin tones.")
     print("The program shows you the pinyin of a two character word and "
-          "plays the corresponding audio")
+          "plays the corresponding audio.")
+    print("If the pinyin is followed by '[+]', this means that more than one "
+          "pronunciations are available.")
     print("To replay the audio, press 'r + Enter', to play the next "
           "pronunciation from a different person,")
-    print("press 'n + Enter', to quit the program press 'q + Enter'")
+    print("press 'n + Enter', to quit the program press 'q + Enter'.")
     print("When you want to make a guess, type the two tones and press enter, "
-          "e.g. '24'")
+          "e.g. '24'.")
     print("After your guess, it is shown if you were correct and which word "
-          "was queried")
+          "was queried.")
     print("Then you can replay the audio ('r + Enter'), replay the next audio "
           "('n' + Enter), quit ('q + Enter') "
-          "or continue with the next tone pair (press 'Enter')")
+          "or continue with the next tone pair (press 'Enter').")
 
 
 if __name__ == "__main__":
